@@ -1,0 +1,1 @@
+{"_class":"hudson.model.Queue$LeftItem","blocked":false,"buildable":false,"id":66601,"stuck":false,"why":null,"cancelled":false,"executable":{"_class":"hudson.model.FreeStyleBuild","number":712,"url":"https://ci.consulo.io/job/android/712/"}}

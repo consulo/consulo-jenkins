@@ -1,0 +1,1 @@
+{"_class":"hudson.model.FreeStyleProject","property":[{"_class":"hudson.plugins.jira.JiraProjectProperty"},{"_class":"com.synopsys.arc.jenkinsci.plugins.jobrestrictions.jobs.JobRestrictionProperty"}]}

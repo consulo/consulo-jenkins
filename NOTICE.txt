@@ -1,0 +1,11 @@
+Consulo Jenkins plugin
+Copyright 2013-2026 consulo.io
+
+This product is a port of the "Jenkins Control Plugin" for IntelliJ based IDEs
+https://github.com/MCMicS/jenkins-control-plugin
+Copyright (c) 2013 David Boissier (codinjutsu) and contributors, maintained by MCMicS.
+Licensed under the Apache License, Version 2.0.
+
+The Jenkins logo (pluginIcon.svg, ICON-LIB/*/consulo.jenkins.JenkinsIconGroup/jenkins.svg) comes from the
+resources of the Jenkins Control Plugin. The Jenkins logo is licensed under the Creative Commons
+Attribution-ShareAlike 3.0 Unported License, https://www.jenkins.io/artwork/

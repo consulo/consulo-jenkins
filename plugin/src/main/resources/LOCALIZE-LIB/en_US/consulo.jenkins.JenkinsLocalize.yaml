@@ -1,0 +1,12 @@
+jenkins.name:
+    text: Jenkins
+error.server.url.not.set:
+    text: Jenkins server URL is not set
+error.no.account:
+    text: No Jenkins account is selected for {0}
+error.not.jenkins:
+    text: '{0} is not a Jenkins server'
+error.not.json:
+    text: 'Jenkins answered with something that is not JSON: {0}'
+error.no.queue.item:
+    text: Jenkins accepted the build of {0}, but did not return its queue item

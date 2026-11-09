@@ -1,0 +1,19 @@
+Started by an SCM change
+Running as SYSTEM
+Building on the built-in node in workspace /var/jenkins_home/workspace/android
+The recommended git tool is: NONE
+No credentials specified
+ > git rev-parse --resolve-git-dir /var/jenkins_home/workspace/android/.git # timeout=10
+Fetching changes from the remote Git repository
+ > git config remote.origin.url https://github.com/JetBrains/android # timeout=10
+Fetching upstream changes from https://github.com/JetBrains/android
+ > git --version # timeout=10
+ > git --version # 'git version 2.47.3'
+ > git fetch --tags --force --progress -- https://github.com/JetBrains/android +refs/heads/*:refs/remotes/origin/* # timeout=10
+ > git rev-parse refs/remotes/origin/master^{commit} # timeout=10
+Checking out Revision fb98c59e5518835fba85ab918a22f66be1a4e480 (refs/remotes/origin/master)
+ > git config core.sparsecheckout # timeout=10
+ > git checkout -f fb98c59e5518835fba85ab918a22f66be1a4e480 # timeout=10
+Commit message: "[build] Update build files (IJI-3451)"
+ > git rev-list --no-walk 51fffc191eba432c0c46ba18094177b83dcd3b5e # timeout=10
+Finished: SUCCESS

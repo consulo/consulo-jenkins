@@ -1,0 +1,19 @@
+<consulo-plugin url="https://github.com/consulo/consulo-jenkins">
+    <id>consulo.jenkins</id>
+    <name>Jenkins</name>
+    <vendor url="https://github.com/MCMicS/jenkins-control-plugin">codinjutsu, MCMicS</vendor>
+
+    <description>
+        <![CDATA[
+            Jenkins server for the Continuous Integration tool window: views, folders and multibranch pipelines, jobs and
+            their builds, starting jobs with parameters, stopping builds, progressive build logs, pipeline stages and artifacts.
+            Signs in with a user name and an API token, or anonymously for servers with public read access.
+        ]]>
+    </description>
+
+    <experimental>true</experimental>
+
+    <tags>
+        <tag>tools</tag>
+    </tags>
+</consulo-plugin>
