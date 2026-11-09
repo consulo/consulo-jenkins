@@ -59,6 +59,11 @@ public class JenkinsServerType extends CIServerType<JenkinsServerOptions> {
     }
 
     @Override
+    public Image getToolWindowIcon() {
+        return JenkinsIconGroup.toolwindowjenkins();
+    }
+
+    @Override
     public String getAccountTypeId() {
         return JenkinsAccountType.ID;
     }
