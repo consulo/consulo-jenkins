@@ -37,12 +37,12 @@ import consulo.continuousIntegration.support.CIBuildStagesSupport;
 import consulo.continuousIntegration.support.CIRerunSupport;
 import consulo.continuousIntegration.support.CIView;
 import consulo.continuousIntegration.support.CIViewsSupport;
+import consulo.http.client.HttpApiResponse;
 import consulo.jenkins.localize.JenkinsLocalize;
 import consulo.project.Project;
 import consulo.util.lang.StringUtil;
 import org.jspecify.annotations.Nullable;
 
-import java.net.http.HttpResponse;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -229,7 +229,7 @@ public class JenkinsServer implements CIServer, CIViewsSupport, CIBuildStagesSup
      * (missing values take their defaults). File parameters need the multipart form of the job page: a {@code json}
      * field {@code {"parameter":[{"name":..,"value":..},{"name":..,"file":"file0"}]}} and a part per file.
      */
-    private static CompletableFuture<HttpResponse<String>> startBuild(JenkinsClient client, CIJob job, CIRunRequest request) {
+    private static CompletableFuture<HttpApiResponse<String>> startBuild(JenkinsClient client, CIJob job, CIRunRequest request) {
         String jobUrl = JenkinsUrls.withSlash(job.id());
         Map<String, CIParameterValue> parameters = request.parameters();
         if (parameters.isEmpty() && !job.hasParameters()) {

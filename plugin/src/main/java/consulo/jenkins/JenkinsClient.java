@@ -21,18 +21,19 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import consulo.accountManagement.AccountConnection;
 import consulo.accountManagement.AccountRequestDecorator;
+import consulo.http.HttpMethod;
+import consulo.http.HttpRequestBuilder;
 import consulo.http.client.HttpApiHelper;
+import consulo.http.client.HttpApiResponse;
 import consulo.http.client.HttpStatusErrorException;
 import consulo.jenkins.localize.JenkinsLocalize;
 import consulo.logging.Logger;
 import consulo.util.lang.StringUtil;
 import org.jspecify.annotations.Nullable;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.http.HttpHeaders;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -105,31 +106,31 @@ public final class JenkinsClient {
     }
 
     public CompletableFuture<JsonObject> getJson(String url) {
-        return request(url).thenCompose(builder -> {
-            builder.GET().header("Accept", "application/json");
-            return HTTP.sendAndReadBody(builder.build(), JenkinsClient::readJson);
+        return request(url, HttpMethod.GET).thenCompose(builder -> {
+            builder.header("Accept", "application/json");
+            return HTTP.sendAndReadBody(builder, JenkinsClient::readJson);
         });
     }
 
     /**
      * Text with the answer headers, for the progressive log.
      */
-    public CompletableFuture<HttpResponse<String>> getText(String url) {
-        return request(url).thenCompose(builder -> HTTP.sendAndRead(builder.GET().build(), JenkinsClient::readText));
+    public CompletableFuture<HttpApiResponse<String>> getText(String url) {
+        return request(url, HttpMethod.GET).thenCompose(builder -> HTTP.sendAndRead(builder, JenkinsClient::readText));
     }
 
     public CompletableFuture<Path> download(String url, Path target) {
-        return request(url).thenCompose(builder -> HTTP.sendAndReadBody(builder.GET().build(), (stream, mimeType, charset) -> {
+        return request(url, HttpMethod.GET).thenCompose(builder -> HTTP.sendAndReadBody(builder, (stream, mimeType, charset) -> {
             Files.copy(stream, target, StandardCopyOption.REPLACE_EXISTING);
             return target;
         }));
     }
 
-    public CompletableFuture<HttpResponse<String>> post(String url) {
-        return post(url, null, HttpRequest.BodyPublishers::noBody);
+    public CompletableFuture<HttpApiResponse<String>> post(String url) {
+        return post(url, null, () -> new byte[0]);
     }
 
-    public CompletableFuture<HttpResponse<String>> postForm(String url, Map<String, String> values) {
+    public CompletableFuture<HttpApiResponse<String>> postForm(String url, Map<String, String> values) {
         StringBuilder form = new StringBuilder();
         for (Map.Entry<String, String> entry : values.entrySet()) {
             if (!form.isEmpty()) {
@@ -138,7 +139,7 @@ public final class JenkinsClient {
             form.append(JenkinsUrls.encode(entry.getKey())).append('=').append(JenkinsUrls.encode(entry.getValue()));
         }
         String body = form.toString();
-        return post(url, FORM_CONTENT_TYPE, () -> HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8));
+        return post(url, FORM_CONTENT_TYPE, () -> body.getBytes(StandardCharsets.UTF_8));
     }
 
     /**
@@ -146,37 +147,35 @@ public final class JenkinsClient {
      *
      * @param files file parts by their part name, the {@code json} field refers to them by these names
      */
-    public CompletableFuture<HttpResponse<String>> postMultipart(String url, String json, Map<String, Path> files) {
+    public CompletableFuture<HttpApiResponse<String>> postMultipart(String url, String json, Map<String, Path> files) {
         String boundary = "----consulo" + UUID.randomUUID().toString().replace("-", "");
-        Callable<HttpRequest.BodyPublisher> body = () -> {
-            List<HttpRequest.BodyPublisher> parts = new ArrayList<>();
+        Callable<byte[]> body = () -> {
+            ByteArrayOutputStream parts = new ByteArrayOutputStream();
             for (Map.Entry<String, Path> file : files.entrySet()) {
                 String fileName = String.valueOf(file.getValue().getFileName()).replace("\"", "");
-                parts.add(HttpRequest.BodyPublishers.ofString(
+                parts.writeBytes((
                     "--" + boundary + "\r\n"
                         + "Content-Disposition: form-data; name=\"" + file.getKey() + "\"; filename=\"" + fileName + "\"\r\n"
-                        + "Content-Type: application/octet-stream\r\n\r\n",
-                    StandardCharsets.UTF_8
-                ));
-                parts.add(HttpRequest.BodyPublishers.ofFile(file.getValue()));
-                parts.add(HttpRequest.BodyPublishers.ofString("\r\n", StandardCharsets.UTF_8));
+                        + "Content-Type: application/octet-stream\r\n\r\n"
+                ).getBytes(StandardCharsets.UTF_8));
+                parts.writeBytes(Files.readAllBytes(file.getValue()));
+                parts.writeBytes("\r\n".getBytes(StandardCharsets.UTF_8));
             }
-            parts.add(HttpRequest.BodyPublishers.ofString(
+            parts.writeBytes((
                 "--" + boundary + "\r\n"
                     + "Content-Disposition: form-data; name=\"json\"\r\n"
                     + "Content-Type: application/json; charset=UTF-8\r\n\r\n"
                     + json + "\r\n"
-                    + "--" + boundary + "--\r\n",
-                StandardCharsets.UTF_8
-            ));
-            return HttpRequest.BodyPublishers.concat(parts.toArray(HttpRequest.BodyPublisher[]::new));
+                    + "--" + boundary + "--\r\n"
+            ).getBytes(StandardCharsets.UTF_8));
+            return parts.toByteArray();
         };
         return post(url, "multipart/form-data; boundary=" + boundary, body);
     }
 
-    private CompletableFuture<HttpResponse<String>> post(String url,
-                                                         @Nullable String contentType,
-                                                         Callable<HttpRequest.BodyPublisher> body) {
+    private CompletableFuture<HttpApiResponse<String>> post(String url,
+                                                            @Nullable String contentType,
+                                                            Callable<byte[]> body) {
         return postOnce(url, contentType, body).exceptionallyCompose(error -> {
             if (isCrumbError(error)) {
                 // the web session of the crumb expired
@@ -187,12 +186,12 @@ public final class JenkinsClient {
         });
     }
 
-    private CompletableFuture<HttpResponse<String>> postOnce(String url,
-                                                             @Nullable String contentType,
-                                                             Callable<HttpRequest.BodyPublisher> body) {
-        return crumb().thenCompose(crumb -> request(url).thenCompose(builder -> {
+    private CompletableFuture<HttpApiResponse<String>> postOnce(String url,
+                                                                @Nullable String contentType,
+                                                                Callable<byte[]> body) {
+        return crumb().thenCompose(crumb -> request(url, HttpMethod.POST).thenCompose(builder -> {
             try {
-                builder.POST(body.call());
+                builder.body(body.call());
             }
             catch (Exception e) {
                 return CompletableFuture.failedFuture(e);
@@ -209,7 +208,7 @@ public final class JenkinsClient {
             if (cookie != null) {
                 builder.header("Cookie", cookie);
             }
-            return HTTP.sendAndRead(builder.build(), JenkinsClient::readText);
+            return HTTP.sendAndRead(builder, JenkinsClient::readText);
         }));
     }
 
@@ -223,10 +222,10 @@ public final class JenkinsClient {
     }
 
     private CompletableFuture<Crumb> loadCrumb() {
-        return request(myRootUrl + "crumbIssuer/api/json")
+        return request(myRootUrl + "crumbIssuer/api/json", HttpMethod.GET)
             .thenCompose(builder -> {
-                builder.GET().header("Accept", "application/json");
-                return HTTP.sendAndRead(builder.build(), JenkinsClient::readJson);
+                builder.header("Accept", "application/json");
+                return HTTP.sendAndRead(builder, JenkinsClient::readJson);
             })
             .handle((response, error) -> {
                 if (error != null) {
@@ -243,7 +242,7 @@ public final class JenkinsClient {
             });
     }
 
-    private CompletableFuture<HttpRequest.Builder> request(String url) {
+    private CompletableFuture<HttpRequestBuilder> request(String url, HttpMethod method) {
         Map<String, String> headers = new LinkedHashMap<>();
         Map<String, String> parameters = new LinkedHashMap<>();
         myConnection.decorate(new AccountRequestDecorator() {
@@ -266,9 +265,9 @@ public final class JenkinsClient {
                 .append(JenkinsUrls.encode(parameter.getValue()));
         }
 
-        CompletableFuture<HttpRequest.Builder> request;
+        CompletableFuture<HttpRequestBuilder> request;
         try {
-            request = HTTP.request(uri.toString());
+            request = HTTP.request(uri.toString(), method);
         }
         catch (IllegalArgumentException e) {
             return CompletableFuture.failedFuture(e);
@@ -279,8 +278,8 @@ public final class JenkinsClient {
         });
     }
 
-    public static @Nullable String header(HttpResponse<?> response, String name) {
-        return response.headers().firstValue(name).orElse(null);
+    public static @Nullable String header(HttpApiResponse<?> response, String name) {
+        return response.header(name);
     }
 
     public static boolean isStatus(Throwable error, int status) {
@@ -303,9 +302,9 @@ public final class JenkinsClient {
         return body != null && body.contains(CRUMB_ERROR);
     }
 
-    private static @Nullable String cookies(HttpHeaders headers) {
+    private static @Nullable String cookies(Map<String, List<String>> headers) {
         List<String> cookies = new ArrayList<>();
-        for (String setCookie : headers.allValues("Set-Cookie")) {
+        for (String setCookie : setCookies(headers)) {
             int end = setCookie.indexOf(';');
             String cookie = (end < 0 ? setCookie : setCookie.substring(0, end)).trim();
             if (!cookie.isEmpty()) {
@@ -313,6 +312,15 @@ public final class JenkinsClient {
             }
         }
         return cookies.isEmpty() ? null : String.join("; ", cookies);
+    }
+
+    private static List<String> setCookies(Map<String, List<String>> headers) {
+        for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
+            if ("Set-Cookie".equalsIgnoreCase(entry.getKey())) {
+                return entry.getValue();
+            }
+        }
+        return List.of();
     }
 
     private static String readText(InputStream stream, @Nullable String mimeType, @Nullable Charset charset) throws IOException {
