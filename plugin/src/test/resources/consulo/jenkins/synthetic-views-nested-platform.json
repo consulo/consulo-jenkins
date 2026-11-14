@@ -1,0 +1,1 @@
+{"_class":"hudson.plugins.nested_view.NestedView","views":[{"_class":"hudson.model.ListView","name":"core","url":"https://jenkins.example.com/view/platform/view/core/"},{"_class":"hudson.model.ListView","name":"java","url":"https://jenkins.example.com/view/platform/view/java/"}]}

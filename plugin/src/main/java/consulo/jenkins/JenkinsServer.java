@@ -326,7 +326,14 @@ public class JenkinsServer implements CIServer, CIViewsSupport, CIBuildStagesSup
     public CompletableFuture<List<CIView>> loadViews() {
         return client()
             .thenCompose(client -> client.getJson(JenkinsUrls.api(client.getRootUrl(), JenkinsJson.VIEWS_TREE)))
-            .thenApply(JenkinsJson::views);
+            .thenApply(json -> JenkinsJson.views(json, JenkinsLocalize.viewAll().get()));
+    }
+
+    @Override
+    public CompletableFuture<List<CIView>> loadViews(CIView parent) {
+        return client()
+            .thenCompose(client -> client.getJson(JenkinsUrls.api(parent.id(), JenkinsJson.NESTED_VIEWS_TREE)))
+            .thenApply(json -> JenkinsJson.views(json, JenkinsLocalize.viewAll().get()));
     }
 
     @Override

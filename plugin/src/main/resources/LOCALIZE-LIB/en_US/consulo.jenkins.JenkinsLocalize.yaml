@@ -1,5 +1,7 @@
 jenkins.name:
     text: Jenkins
+view.all:
+    text: All
 error.server.url.not.set:
     text: Jenkins server URL is not set
 error.no.account:

@@ -61,14 +61,34 @@ public class JenkinsJsonTest {
 
     @Test
     public void testViews() {
-        List<CIView> views = JenkinsJson.views(load("server-views.json"));
+        List<CIView> views = JenkinsJson.views(load("server-views.json"), "All");
         print("views", views);
         assertEquals(9, views.size());
         CIView all = views.get(0);
-        assertEquals("all", all.name());
+        assertEquals("All", all.name());
         assertTrue(all.primary());
         assertEquals("https://ci.consulo.io/", all.id());
         assertEquals(1, views.stream().filter(CIView::primary).count());
+        assertFalse(views.stream().anyMatch(CIView::container));
+    }
+
+    @Test
+    public void testNestedViews() {
+        List<CIView> views = JenkinsJson.views(load("synthetic-views-nested.json"), "All");
+        print("nested views", views);
+        assertEquals(3, views.size());
+        assertEquals("All", views.get(0).name());
+        assertFalse(views.get(0).container());
+        CIView platform = views.get(1);
+        assertEquals("platform", platform.name());
+        assertTrue(platform.container());
+        assertFalse(platform.primary());
+        assertFalse(views.get(2).container());
+
+        List<CIView> children = JenkinsJson.views(load("synthetic-views-nested-platform.json"), "All");
+        assertEquals(2, children.size());
+        assertEquals("https://jenkins.example.com/view/platform/view/core/", children.get(0).id());
+        assertFalse(children.stream().anyMatch(CIView::primary));
     }
 
     @Test

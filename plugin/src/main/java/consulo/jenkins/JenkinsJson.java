@@ -69,7 +69,14 @@ public final class JenkinsJson {
     public static final String PARAMETERS_TREE =
         "property[parameterDefinitions[name,description,type,_class,defaultParameterValue[value],choices]]";
 
-    public static final String VIEWS_TREE = "views[name,url,_class],primaryView[name]";
+    public static final String NESTED_VIEWS_TREE = "views[name,url,_class]";
+
+    public static final String VIEWS_TREE = NESTED_VIEWS_TREE + ",primaryView[name]";
+
+    /**
+     * Name of the view of all jobs, which Jenkins shows by its display name.
+     */
+    private static final String ALL_VIEW_NAME = "all";
 
     public static final String QUEUE_ITEM_TREE = "_class,id,why,blocked,buildable,stuck,cancelled,executable[number,url]";
 
@@ -357,16 +364,24 @@ public final class JenkinsJson {
         return result;
     }
 
-    public static List<CIView> views(JsonObject server) {
-        String primaryName = string(object(server, "primaryView"), "name");
+    /**
+     * Views of the server or of a nested view (Nested View plugin), which has no primary view.
+     *
+     * @param allViewName the shown name of the view of all jobs
+     */
+    public static List<CIView> views(JsonObject container, String allViewName) {
+        String primaryName = string(object(container, "primaryView"), "name");
         List<CIView> result = new ArrayList<>();
-        for (JsonObject view : objects(server, "views")) {
+        for (JsonObject view : objects(container, "views")) {
             String url = string(view, "url");
             String name = string(view, "name");
             if (url == null || name == null) {
                 continue;
             }
-            result.add(new CIView(url, name, url, name.equals(primaryName)));
+            String viewClass = string(view, "_class");
+            boolean allView = "hudson.model.AllView".equals(viewClass) && ALL_VIEW_NAME.equals(name);
+            boolean nested = viewClass != null && viewClass.endsWith(".NestedView");
+            result.add(new CIView(url, allView ? allViewName : name, url, name.equals(primaryName), nested));
         }
         return result;
     }
